@@ -4,3 +4,7 @@ python-multipart
 insanely-fast-whisper
 pydub
 # torch is installed separately in the Dockerfile to ensure CUDA compatibility.
+
+# Testing dependencies
+pytest
+httpx

@@ -27,11 +27,12 @@ COPY requirements.txt .
 # This version is compatible with the CUDA 11.8 in the base image
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-# Install the rest of the application's Python dependencies
+# Install the rest of the application's Python dependencies, including for testing
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Copy the application code into the container
+# Copy the application and test code into the container
 COPY main.py .
+COPY test_main.py .
 
 # Expose the port the app will run on
 EXPOSE 8001

@@ -3,7 +3,7 @@ version: "3.8"
 services:
   # 1. Real-Time Communication (RTC) Service
   livekit:
-    image: livekit/livekit-server:v2.2.0 # Using a recent, stable version
+    image: livekit/livekit-server:latest # Using latest tag as specific versions were not found
     container_name: livekit_server
     restart: unless-stopped
     ports:

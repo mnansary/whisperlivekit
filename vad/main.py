@@ -8,11 +8,10 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+from contextlib import asynccontextmanager
 
-# --- Model Loading ---
-# Use a path that will be in the Docker container. This helps cache the model
-# during the Docker build process.
+# --- Model Loading & Lifespan Management ---
+# Use a path that will be in the Docker container for caching.
 MODEL_CACHE_DIR = "/app/models"
 os.makedirs(MODEL_CACHE_DIR, exist_ok=True)
 torch.hub.set_dir(MODEL_CACHE_DIR)
@@ -20,13 +19,8 @@ torch.hub.set_dir(MODEL_CACHE_DIR)
 model = None
 utils = None
 
-# --- VAD Configuration ---
-VAD_SAMPLE_RATE = 16000  # Silero VAD expects 16kHz audio
-VAD_THRESHOLD = 0.5      # Speech confidence threshold
-
-@app.on_event("startup")
 def load_model():
-    """Load the Silero VAD model on application startup."""
+    """Loads the Silero VAD model into the global variables."""
     global model, utils
     try:
         model, utils = torch.hub.load(
@@ -38,8 +32,25 @@ def load_model():
         logger.info("Silero VAD model loaded successfully (ONNX).")
     except Exception as e:
         logger.error(f"Fatal: Error loading Silero VAD model: {e}")
-        # This will prevent the app from starting if the model fails to load
+        # This will prevent the app from starting if the model fails to load.
         raise RuntimeError("Could not load Silero VAD model") from e
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Handles application startup and shutdown events.
+    The model is loaded on startup.
+    """
+    logger.info("Application startup...")
+    load_model()
+    yield
+    logger.info("Application shutdown.")
+
+app = FastAPI(lifespan=lifespan)
+
+# --- VAD Configuration ---
+VAD_SAMPLE_RATE = 16000  # Silero VAD expects 16kHz audio
+VAD_THRESHOLD = 0.5      # Speech confidence threshold
 
 @app.post("/detect_speech")
 async def detect_speech(request: Request):

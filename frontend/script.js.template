@@ -1,0 +1,126 @@
+const livekit = window.livekit;
+
+// --- Configuration ---
+// These values will be dynamically replaced by environment variables when the
+// frontend container starts. This is handled by `envsubst` in docker-compose.yml.
+const LIVEKIT_URL = '${LIVEKIT_URL}';
+const LIVEKIT_TOKEN = '${LIVEKIT_FRONTEND_TOKEN}';
+
+
+// --- DOM Elements ---
+const statusEl = document.getElementById('connection-status');
+const errorEl = document.getElementById('error-message');
+const pushToTalkBtn = document.getElementById('push-to-talk-btn');
+
+// --- LiveKit Setup ---
+const room = new livekit.Room({
+    audioCaptureDefaults: {
+        noiseSuppression: true,
+        echoCancellation: true,
+    },
+});
+
+let localAudioTrack = null;
+let isConnecting = false;
+
+async function connectToRoom() {
+    if (isConnecting || room.state === livekit.ConnectionState.Connected) return;
+    isConnecting = true;
+
+    try {
+        await room.connect(LIVEKIT_URL, LIVEKIT_TOKEN, {
+            autoSubscribe: true,
+        });
+        statusEl.textContent = 'Connected';
+        statusEl.className = 'status-connected';
+        pushToTalkBtn.disabled = false;
+        errorEl.textContent = '';
+    } catch (error) {
+        console.error('Failed to connect to LiveKit room:', error);
+        statusEl.textContent = 'Connection Failed';
+        statusEl.className = 'status-disconnected';
+        errorEl.textContent = 'Could not connect. Please check the console for details.';
+        pushToTalkBtn.disabled = true;
+    } finally {
+        isConnecting = false;
+    }
+}
+
+// Handle remote tracks (e.g., the bot's audio response)
+room.on(livekit.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+    if (track.kind === livekit.Track.Kind.Audio) {
+        console.log(`Subscribed to audio track from participant: ${participant.identity}`);
+        // Attach the track to an <audio> element to play it.
+        const audioElement = track.attach();
+        document.body.appendChild(audioElement);
+    }
+});
+
+room.on(livekit.RoomEvent.Disconnected, () => {
+    statusEl.textContent = 'Disconnected';
+    statusEl.className = 'status-disconnected';
+    pushToTalkBtn.disabled = true;
+});
+
+// --- Push-to-Talk Logic ---
+let isRecording = false;
+
+async function startRecording() {
+    if (isRecording || room.state !== livekit.ConnectionState.Connected) return;
+    isRecording = true;
+
+    try {
+        // Create and publish the local audio track
+        localAudioTrack = await livekit.createLocalAudioTrack();
+        await room.localParticipant.publishTrack(localAudioTrack);
+
+        console.log('Microphone track published');
+        pushToTalkBtn.classList.add('active');
+        pushToTalkBtn.textContent = 'Speaking...';
+        errorEl.textContent = '';
+    } catch (error) {
+        console.error('Failed to get microphone access or publish track:', error);
+        errorEl.textContent = 'Could not access microphone. Please check browser permissions.';
+        isRecording = false; // Reset state on error
+    }
+}
+
+function stopRecording() {
+    if (!isRecording || !localAudioTrack) return;
+
+    // Unpublish the track
+    room.localParticipant.unpublishTrack(localAudioTrack);
+    // Stop the track to release the microphone
+    localAudioTrack.stop();
+    localAudioTrack = null;
+
+    console.log('Microphone track unpublished');
+    pushToTalkBtn.classList.remove('active');
+    pushToTalkBtn.textContent = 'Hold to Speak';
+    isRecording = false;
+}
+
+// --- Event Listeners for the Button ---
+// Using Pointer events to better handle both mouse and touch
+pushToTalkBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    startRecording();
+});
+
+pushToTalkBtn.addEventListener('pointerup', (e) => {
+    e.preventDefault();
+    stopRecording();
+});
+
+// Also stop if the pointer leaves the button area while pressed
+pushToTalkBtn.addEventListener('pointerleave', (e) => {
+    if (isRecording) {
+        stopRecording();
+    }
+});
+
+
+// --- Initial Connection ---
+window.addEventListener('DOMContentLoaded', () => {
+    connectToRoom();
+});

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangla Voice Agent</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Bangla Voice Agent</h1>
+        <div id="connection-status" class="status-disconnected">
+            Connecting...
+        </div>
+        <div class="controls">
+            <button id="push-to-talk-btn" disabled>Hold to Speak</button>
+        </div>
+        <div class="info">
+             <p>Hold down the button and speak in Bangla. Release when you're done.</p>
+             <p id="error-message" class="error-text"></p>
+        </div>
+    </div>
+
+    <!-- LiveKit Client SDK from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.1.6/dist/livekit-client.umd.min.js"></script>
+    <!-- Main application script -->
+    <script src="script.js"></script>
+</body>
+</html>

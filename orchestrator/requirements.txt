@@ -1,0 +1,5 @@
+livekit
+aiohttp
+pydub
+numpy
+# asyncio is part of the standard library

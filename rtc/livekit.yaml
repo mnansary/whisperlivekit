@@ -1,0 +1,12 @@
+# This is a minimal configuration file for the LiveKit server.
+# For a single-node deployment, Redis is not required. LiveKit will use
+# an in-memory engine, which is sufficient for this project.
+
+port: 7880
+log_level: info
+
+# Keys are not defined here; they are passed securely via environment
+# variables in the docker-compose.yml file. This is a best practice.
+
+# For more advanced configuration options, see the LiveKit documentation:
+# https://docs.livekit.io/self-hosting/configuration/
